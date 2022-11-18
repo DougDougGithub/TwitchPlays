@@ -307,7 +307,7 @@ class YouTube:
 
     def twitch_receive_messages(self):
         if self.session == None:
-            self.reconnect(1)
+            self.reconnect(0)
         messages = []
         if not self.fetch_job:
             time.sleep(1.0/60.0)
