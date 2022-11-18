@@ -15,6 +15,7 @@ import time
 import os
 import json
 import concurrent.futures
+import traceback
 
 MAX_TIME_TO_WAIT_FOR_LOGIN = 3
 YOUTUBE_FETCH_INTERVAL = 1
@@ -282,16 +283,27 @@ class YouTube:
             self.session.close()
             self.session = None
             return []
-        data = json.loads(res.text)
-        self.payload['continuation'] = self.get_continuation_token(data)
-        cont = data['continuationContents']['liveChatContinuation']
-        messages = []
-        if 'actions' in cont:
-            for action in cont['actions']:
-                if 'addChatItemAction' in action:
-                    item = action['addChatItemAction']['item']['liveChatTextMessageRenderer']
-                    messages.append({'author': item['authorName']['simpleText'], 'content': item['message']['runs']})
-        return messages
+        try:
+            data = json.loads(res.text)
+            self.payload['continuation'] = self.get_continuation_token(data)
+            cont = data['continuationContents']['liveChatContinuation']
+            messages = []
+            if 'actions' in cont:
+                for action in cont['actions']:
+                    if 'addChatItemAction' in action:
+                        if 'item' in action['addChatItemAction']:
+                            if 'liveChatTextMessageRenderer' in action['addChatItemAction']['item']:
+                                item = action['addChatItemAction']['item']['liveChatTextMessageRenderer']
+                                messages.append({
+                                    'author': item['authorName']['simpleText'],
+                                    'content': item['message']['runs']
+                                })
+            return messages
+        except Exception as e:
+            print(f"Failed to parse messages.")
+            print("Body:", res.text)
+            traceback.print_exc()
+        return []
 
     def twitch_receive_messages(self):
         if self.session == None:
@@ -308,8 +320,8 @@ class YouTube:
                 res = self.fetch_job.result(1.0/60.0)
             except concurrent.futures.TimeoutError:
                 timed_out = True
-            except Exception as e:
-                print(e)
+            except Exception:
+                traceback.print_exc()
                 self.session.close()
                 self.session = None
                 return
