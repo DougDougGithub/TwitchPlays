@@ -1,18 +1,18 @@
 # DougDoug Note: 
-# This is the code that connects to Twitch / Youtube and checks for new messages.
+# This is the code that connects to Twitch / YouTube and checks for new messages.
 # You should not need to modify anything in this file, just use as is.
 
 # This code is based on Wituz's "Twitch Plays" tutorial, updated for Python 3.X
 # http://www.wituz.com/make-your-own-twitch-plays-stream.html
-# Updated for Youtube by DDarknut, with help by Ottomated
+# Updated for YouTube by DDarknut, with help by Ottomated
+
+# This code was also further updated by Tancred423
 
 import requests
-import sys
 import socket
 import re
 import random
 import time
-import os
 import json
 import concurrent.futures
 import traceback
@@ -29,14 +29,19 @@ class Twitch:
     login_timestamp = 0
 
     def twitch_connect(self, channel):
-        if self.sock: self.sock.close()
+        if self.sock:
+            self.sock.close()
+
         self.sock = None
         self.partial = b''
         self.login_ok = False
         self.channel = channel
 
         # Compile regular expression
-        self.re_prog = re.compile(b'^(?::(?:([^ !\r\n]+)![^ \r\n]*|[^ \r\n]*) )?([^ \r\n]+)(?: ([^:\r\n]*))?(?: :([^\r\n]*))?\r\n', re.MULTILINE)
+        self.re_prog = re.compile(
+            b'^(?::(?:([^ !\r\n]+)![^ \r\n]*|[^ \r\n]*) )?([^ \r\n]+)(?: ([^:\r\n]*))?(?: :([^\r\n]*))?\r\n',
+            re.MULTILINE
+        )
 
         # Create socket
         print('Connecting to Twitch...')
@@ -50,7 +55,7 @@ class Twitch:
         print('Connected to Twitch. Logging in anonymously...')
         self.sock.send(('PASS asdf\r\nNICK %s\r\n' % user).encode())
 
-        self.sock.settimeout(1.0/60.0)
+        self.sock.settimeout(1.0 / 60.0)
 
         self.login_timestamp = time.time()
 
@@ -63,23 +68,20 @@ class Twitch:
     def receive_and_parse_data(self):
         buffer = b''
         while True:
-            received = b''
             try:
                 received = self.sock.recv(4096)
             except socket.timeout:
                 break
-            # except OSError as e:
-            #     if e.winerror == 10035:
-            #         # This "error" is expected -- we receive it if timeout is set to zero, and there is no data to read on the socket.
-            #         break
             except Exception as e:
                 print('Unexpected connection error. Reconnecting in a second...', e)
                 self.reconnect(1)
                 return []
+
             if not received:
                 print('Connection closed by Twitch. Reconnecting in 5 seconds...')
                 self.reconnect(5)
                 return []
+
             buffer += received
 
         if buffer:
@@ -93,9 +95,9 @@ class Twitch:
             matches = list(self.re_prog.finditer(buffer))
             for match in matches:
                 res.append({
-                    'name':     (match.group(1) or b'').decode(errors='replace'),
-                    'command':  (match.group(2) or b'').decode(errors='replace'),
-                    'params':   list(map(lambda p: p.decode(errors='replace'), (match.group(3) or b'').split(b' '))),
+                    'name': (match.group(1) or b'').decode(errors='replace'),
+                    'command': (match.group(2) or b'').decode(errors='replace'),
+                    'params': list(map(lambda p: p.decode(errors='replace'), (match.group(3) or b'').split(b' '))),
                     'trailing': (match.group(4) or b'').decode(errors='replace'),
                 })
 
@@ -109,7 +111,8 @@ class Twitch:
 
                 if matches[0].start() != 0:
                     # If we get here, we might have missed a message. pepeW
-                    print('either ddarknut fucked up or twitch is bonkers, or both I mean who really knows anything at this point')
+                    print(
+                        'either ddarknut fucked up or twitch is bonkers, or both I mean who really knows anything at this point')
 
             return res
 
@@ -134,14 +137,22 @@ class Twitch:
                 print('Successfully joined channel %s' % irc_message['params'][0])
             elif cmd == 'NOTICE':
                 print('Server notice:', irc_message['params'], irc_message['trailing'])
-            elif cmd == '002': continue
-            elif cmd == '003': continue
-            elif cmd == '004': continue
-            elif cmd == '375': continue
-            elif cmd == '372': continue
-            elif cmd == '376': continue
-            elif cmd == '353': continue
-            elif cmd == '366': continue
+            elif cmd == '002':
+                continue
+            elif cmd == '003':
+                continue
+            elif cmd == '004':
+                continue
+            elif cmd == '375':
+                continue
+            elif cmd == '372':
+                continue
+            elif cmd == '376':
+                continue
+            elif cmd == '353':
+                continue
+            elif cmd == '366':
+                continue
             else:
                 print('Unhandled irc message:', irc_message)
 
@@ -154,6 +165,7 @@ class Twitch:
 
         return privmsgs
 
+
 # Thanks to Ottomated for helping with the yt side of things!
 class YouTube:
     session = None
@@ -164,7 +176,8 @@ class YouTube:
     fetch_job = None
     next_fetch_time = 0
 
-    re_initial_data = re.compile('(?:window\\s*\\[\\s*[\\"\']ytInitialData[\\"\']\\s*\\]|ytInitialData)\\s*=\\s*({.+?})\\s*;')
+    re_initial_data = re.compile(
+        '(?:window\\s*\\[\\s*[\\"\']ytInitialData[\\"\']\\s*\\]|ytInitialData)\\s*=\\s*({.+?})\\s*;')
     re_config = re.compile('(?:ytcfg\\s*.set)\\(({.+?})\\)\\s*;')
 
     def get_continuation_token(self, data):
@@ -176,11 +189,15 @@ class YouTube:
 
     def reconnect(self, delay):
         if self.fetch_job and self.fetch_job.running():
-            if not fetch_job.cancel():
+            if not self.fetch_job.cancel():
                 print("Waiting for fetch job to finish...")
                 self.fetch_job.result()
+
         print(f"Retrying in {delay}...")
-        if self.session: self.session.close()
+
+        if self.session:
+            self.session.close()
+
         self.session = None
         self.config = {}
         self.payload = {}
@@ -198,7 +215,8 @@ class YouTube:
         # Create http client session
         self.session = requests.Session()
         # Spoof user agent so yt thinks we're an upstanding browser
-        self.session.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
+        self.session.headers[
+            'User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
         # Add consent cookie to bypass google's consent page
         requests.utils.add_dict_to_cookiejar(self.session.cookies, {'CONSENT': 'YES+'})
 
@@ -214,9 +232,11 @@ class YouTube:
             res = self.session.get(live_url)
         if not res.ok:
             if stream_url is not None:
-                print(f"Couldn't load the stream URL ({res.status_code} {res.reason}). Is the stream URL correct? {self.stream_url}")
+                print(
+                    f"Couldn't load the stream URL ({res.status_code} {res.reason}). Is the stream URL correct? {self.stream_url}")
             else:
-                print(f"Couldn't load livestream page ({res.status_code} {res.reason}). Is the channel ID correct? {self.channel_id}")
+                print(
+                    f"Couldn't load livestream page ({res.status_code} {res.reason}). Is the channel ID correct? {self.channel_id}")
             time.sleep(5)
             exit(1)
         livestream_page = res.text
@@ -232,7 +252,10 @@ class YouTube:
         # Get continuation token for live chat iframe
         iframe_continuation = None
         try:
-            iframe_continuation = initial_data['contents']['twoColumnWatchNextResults']['conversationBar']['liveChatRenderer']['header']['liveChatHeaderRenderer']['viewSelector']['sortFilterSubMenuRenderer']['subMenuItems'][1]['continuation']['reloadContinuationData']['continuation']
+            iframe_continuation = \
+            initial_data['contents']['twoColumnWatchNextResults']['conversationBar']['liveChatRenderer']['header'][
+                'liveChatHeaderRenderer']['viewSelector']['sortFilterSubMenuRenderer']['subMenuItems'][1][
+                'continuation']['reloadContinuationData']['continuation']
         except Exception as e:
             print(f"Couldn't find the livestream chat. Is the channel not live? url: {live_url}")
             time.sleep(5)
@@ -275,7 +298,9 @@ class YouTube:
 
     def fetch_messages(self):
         payload_bytes = bytes(json.dumps(self.payload), "utf8")
-        res = self.session.post(f"https://www.youtube.com/youtubei/v1/live_chat/get_live_chat?key={self.config['INNERTUBE_API_KEY']}&prettyPrint=false", payload_bytes)
+        res = self.session.post(
+            f"https://www.youtube.com/youtubei/v1/live_chat/get_live_chat?key={self.config['INNERTUBE_API_KEY']}&prettyPrint=false",
+            payload_bytes)
         if not res.ok:
             print(f"Failed to fetch messages. {res.status_code} {res.reason}")
             print("Body:", res.text)
@@ -310,14 +335,14 @@ class YouTube:
             self.reconnect(0)
         messages = []
         if not self.fetch_job:
-            time.sleep(1.0/60.0)
+            time.sleep(1.0 / 60.0)
             if time.time() > self.next_fetch_time:
                 self.fetch_job = self.thread_pool.submit(self.fetch_messages)
         else:
             res = []
             timed_out = False
             try:
-                res = self.fetch_job.result(1.0/60.0)
+                res = self.fetch_job.result(1.0 / 60.0)
             except concurrent.futures.TimeoutError:
                 timed_out = True
             except Exception:

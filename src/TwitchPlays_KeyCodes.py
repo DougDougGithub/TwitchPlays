@@ -117,7 +117,6 @@ MOUSE7 = 0x107
 MOUSE_WHEEL_UP = 0x108
 MOUSE_WHEEL_DOWN = 0x109
 
-
 #############################################################
 ################## DIRECT INPUT FUNCTIONS ###################
 #############################################################
@@ -136,7 +135,8 @@ def HoldKey(hexKeyCode):
 def ReleaseKey(hexKeyCode):
     extra = ctypes.c_ulong(0)
     ii_ = pynput._util.win32.INPUT_union()
-    ii_.ki = pynput._util.win32.KEYBDINPUT(0, hexKeyCode, 0x0008 | 0x0002, 0, ctypes.cast(ctypes.pointer(extra), ctypes.c_void_p))
+    ii_.ki = pynput._util.win32.KEYBDINPUT(0, hexKeyCode, 0x0008 | 0x0002, 0,
+                                           ctypes.cast(ctypes.pointer(extra), ctypes.c_void_p))
     x = pynput._util.win32.INPUT(ctypes.c_ulong(1), ii_)
     SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
 
