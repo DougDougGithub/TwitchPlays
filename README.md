@@ -3,11 +3,7 @@ These are the three Python files I use that allows Twitch Chat or Youtube Chat t
 
 To run the code you will need to install Python 3.9.  
 Additionally, you will need to install the following python modules using Pip:  
-python -m pip install keyboard  
-python -m pip install pydirectinput  
-python -m pip install pyautogui  
-python -m pip install pynput  
-python -m pip install requests  
+`pip install -r requirements.txt`
 
 Once Python is set up, simply change the Twitch username (or Youtube channel ID) in TwitchPlays_TEMPLATE.py, and you'll be ready to go.
 
